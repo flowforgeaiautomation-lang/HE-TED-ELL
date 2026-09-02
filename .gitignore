@@ -7,15 +7,17 @@ repo/
 *.log
 
 # Root-level temp/backup files (not part of the app)
-article_route.tsx
-articles.functions.ts
-articles.functions.ts.full
-articles_functions.ts
-fix_all.py
-fix_ezoic.py
-fix_ezoic2.py
-fix_loader.py
-fix_visuals.py
-ingest_hook.ts
-ingestion_server.ts
-regenerate-articles.mjs
+# Leading slash ensures these ONLY match at the repo root,
+# NOT src/lib/articles.functions.ts
+/article_route.tsx
+/articles.functions.ts
+/articles.functions.ts.full
+/articles_functions.ts
+/fix_all.py
+/fix_ezoic.py
+/fix_ezoic2.py
+/fix_loader.py
+/fix_visuals.py
+/ingest_hook.ts
+/ingestion_server.ts
+/regenerate-articles.mjs
