@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.output/
+.vercel/
+.wrangler/
+*.log
+.DS_Store
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

@@ -1,0 +1,2 @@
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS reprocessed_at timestamptz;
+CREATE INDEX IF NOT EXISTS articles_reprocessed_at_idx ON public.articles (reprocessed_at NULLS FIRST, published_at DESC);

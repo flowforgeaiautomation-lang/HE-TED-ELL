@@ -1,0 +1,2 @@
+google.com, pub-3923814665808842, DIRECT, f08c47fec0942fa0
+ezoic.com, 1, DIRECT, f08c47fec0942fa0

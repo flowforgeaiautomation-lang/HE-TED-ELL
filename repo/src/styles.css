@@ -1,0 +1,191 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * THE UNITED HELL — Premium black & white editorial design system.
+ * Display: Fraunces (variable serif). Body: Inter. UI: Inter.
+ * Tone: NYT × Economist × National Geographic, but for AI-curated discovery.
+ */
+
+@theme inline {
+  --font-serif: "Fraunces", "Source Serif 4", "Times New Roman", serif;
+  --font-sans: "Inter", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-rule: var(--rule);
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+:root {
+  /* Light: warm paper */
+  --background: oklch(0.985 0.003 80);     /* off-white paper */
+  --foreground: oklch(0.16 0.005 270);     /* near-black ink */
+  --paper: oklch(0.985 0.003 80);
+  --ink: oklch(0.16 0.005 270);
+  --rule: oklch(0.16 0.005 270 / 0.18);
+
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  --primary: oklch(0.16 0.005 270);
+  --primary-foreground: oklch(0.985 0.003 80);
+  --secondary: oklch(0.94 0.003 80);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.95 0.003 80);
+  --muted-foreground: oklch(0.42 0.005 270);
+  --accent: oklch(0.92 0.003 80);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.45 0.18 25);
+  --destructive-foreground: oklch(0.985 0.003 80);
+  --border: oklch(0.16 0.005 270 / 0.14);
+  --input: oklch(0.16 0.005 270 / 0.18);
+  --ring: oklch(0.16 0.005 270 / 0.4);
+}
+
+.dark {
+  --background: oklch(0.12 0.004 270);
+  --foreground: oklch(0.96 0.003 80);
+  --paper: oklch(0.12 0.004 270);
+  --ink: oklch(0.96 0.003 80);
+  --rule: oklch(0.96 0.003 80 / 0.16);
+
+  --card: oklch(0.16 0.004 270);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.14 0.004 270);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.96 0.003 80);
+  --primary-foreground: oklch(0.12 0.004 270);
+  --secondary: oklch(0.2 0.004 270);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.19 0.004 270);
+  --muted-foreground: oklch(0.68 0.005 80);
+  --accent: oklch(0.22 0.004 270);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.58 0.18 25);
+  --destructive-foreground: oklch(0.96 0.003 80);
+  --border: oklch(0.96 0.003 80 / 0.14);
+  --input: oklch(0.96 0.003 80 / 0.2);
+  --ring: oklch(0.96 0.003 80 / 0.4);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: var(--color-foreground); color: var(--color-background); }
+
+  h1, h2, h3, h4, .serif {
+    font-family: var(--font-serif);
+    font-feature-settings: "ss01", "ss02", "liga", "kern";
+    letter-spacing: -0.015em;
+  }
+
+  /* Editorial display */
+  .display-1 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: clamp(2.4rem, 5.2vw, 4.8rem);
+    line-height: 1.02;
+    letter-spacing: -0.022em;
+  }
+  .display-2 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: clamp(1.8rem, 3.2vw, 2.8rem);
+    line-height: 1.08;
+    letter-spacing: -0.018em;
+  }
+  .display-3 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: clamp(1.35rem, 2vw, 1.7rem);
+    line-height: 1.15;
+    letter-spacing: -0.012em;
+  }
+  .kicker {
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+  .dek {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--color-muted-foreground);
+    font-size: clamp(1rem, 1.15vw, 1.15rem);
+    line-height: 1.4;
+  }
+  .rule {
+    border-color: var(--color-rule);
+  }
+  .article-prose p {
+    font-family: var(--font-serif);
+    font-size: 1.18rem;
+    line-height: 1.7;
+    margin-bottom: 1.2em;
+  }
+  .article-prose p:first-of-type::first-letter {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 4.2em;
+    float: left;
+    line-height: 0.85;
+    padding: 0.08em 0.12em 0 0;
+    color: var(--color-foreground);
+  }
+
+  .container-edit {
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 3vw, 2.5rem);
+  }
+  .container-read {
+    max-width: 720px;
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 3vw, 2rem);
+  }
+
+  .hover-lift { transition: transform .35s cubic-bezier(.2,.7,.2,1), opacity .25s; }
+  .hover-lift:hover { transform: translateY(-2px); }
+}
