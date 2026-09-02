@@ -4,10 +4,7 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
-<<<<<<< HEAD
-=======
 import { getSupabaseUrl } from '@/lib/supabase-config';
->>>>>>> 37747a8 (fix: resolve hydration crash from window.matchMedia in SiteHeader during SSR)
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -34,11 +31,7 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 function createSupabaseAdminClient() {
-<<<<<<< HEAD
-  const SUPABASE_URL = process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
-=======
   const SUPABASE_URL = getSupabaseUrl();
->>>>>>> 37747a8 (fix: resolve hydration crash from window.matchMedia in SiteHeader during SSR)
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {

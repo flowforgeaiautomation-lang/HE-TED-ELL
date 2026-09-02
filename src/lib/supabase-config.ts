@@ -13,14 +13,8 @@ function isDeadUrl(url: string): boolean {
 }
 
 function isInvalidKey(key: string): boolean {
-<<<<<<< HEAD
-  // Keys that are known to be rejected by the active project
-  return key.startsWith("sb_publishable_") || key.startsWith("sb_secret_");
-=======
-  // Empty or placeholder keys are invalid
   if (!key || key === "undefined" || key === "null") return true;
   return false;
->>>>>>> 37747a8 (fix: resolve hydration crash from window.matchMedia in SiteHeader during SSR)
 }
 
 export function getSupabaseUrl(): string {
