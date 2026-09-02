@@ -3,6 +3,7 @@ import type {} from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { SITE_URL } from "@/lib/seo";
 import { BOOKS } from "@/lib/editions-data";
+import { getSupabaseUrl, getSupabasePublishableKey } from "@/lib/supabase-config";
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -28,8 +29,8 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const sUrl = process.env.SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
-        const sKey = process.env.SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const sUrl = getSupabaseUrl();
+        const sKey = getSupabasePublishableKey();
         const supabase = createClient(sUrl, sKey, {
           global: { fetch: createSupabaseFetch(sKey) },
           auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
