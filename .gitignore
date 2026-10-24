@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.output/
+.wrangler/
+.vercel/
+.git/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+supabase/functions-deploy-state.json
+.DS_Store
+*.log
+.env.local
