@@ -1,0 +1,31 @@
+# robots.txt — The United Hell
+# https://www.theunitedhell.in
+
+User-agent: *
+Allow: /
+
+# Block private/authenticated paths from indexing
+Disallow: /api/
+Disallow: /auth
+Disallow: /reset-password
+Disallow: /admin
+Disallow: /bookmarks
+Disallow: /profile
+
+# AI crawlers — allow
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://www.theunitedhell.in/sitemap.xml

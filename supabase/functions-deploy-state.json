@@ -1,0 +1,37 @@
+{
+  "projectId": "68356398",
+  "functions": {
+    "backfill-vocab": {
+      "hasChanged": false,
+      "hash": "ae9300a61e2a4375d108f784410c2975796234657917f168b83434c584c46420"
+    },
+    "fetch-news-articles": {
+      "hasChanged": false,
+      "hash": "631dc4ee2dabc1c6320e7e50d6c791e655214a3ba101f765b2bff4c93f87f262"
+    },
+    "fix-database": {
+      "hasChanged": false,
+      "hash": "ab986c3dd3b1be99f3b6415d1bc0672315e0834dc170b85d63a67c44b3cedca5"
+    },
+    "fix-deks": {
+      "hasChanged": false,
+      "hash": "f79500caa67ea52d15b74ab6a76b3f71cb9637812a0cdc0a346f353c33207200"
+    },
+    "get-config": {
+      "hasChanged": false,
+      "hash": "81e7b4f46fd846ed070892927aaed54deb0becfb8b318678428a2c4d29f8448d"
+    },
+    "libretranslate-proxy": {
+      "hasChanged": false,
+      "hash": "b6bdad6bb1281020abb59e33540b73dd1fa465528a57139c2252d4a3625d28bb"
+    },
+    "stripe-webhook": {
+      "hasChanged": false,
+      "hash": "2b48643cf7ce2875c42cf6062fff74993633333760d94d592d4abcc6af6a969f"
+    },
+    "update-market-prices": {
+      "hasChanged": false,
+      "hash": "cb10f59a851e6722507201370fedef947eecb1da743234e87b9e19741408f473"
+    }
+  }
+}
