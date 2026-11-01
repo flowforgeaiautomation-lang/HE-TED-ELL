@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#ffffff"/>
+  <text x="256" y="220" font-family="Georgia, 'Times New Roman', serif" font-size="56" font-weight="700" text-anchor="middle" fill="#1a1a1a" letter-spacing="2">THE UNITED</text>
+  <text x="256" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="56" font-weight="700" text-anchor="middle" fill="#1a1a1a" letter-spacing="2">HELL</text>
+  <line x1="156" y1="340" x2="356" y2="340" stroke="#1a1a1a" stroke-width="2"/>
+  <text x="256" y="380" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#666666" letter-spacing="3">BEYOND COMFORT</text>
+  <text x="256" y="404" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#666666" letter-spacing="3">BEYOND HEADLINES</text>
+</svg>

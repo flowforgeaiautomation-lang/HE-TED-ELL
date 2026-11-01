@@ -1,0 +1,1 @@
+ALTER TABLE public.articles DROP CONSTRAINT IF EXISTS articles_unique_cover_image; DROP INDEX IF EXISTS articles_unique_cover_image;

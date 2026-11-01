@@ -1,0 +1,15 @@
+# The United Hell
+
+> An AI-curated journal of discovery — science, history, wildlife, technology, and the people quietly shaping the world. Beyond comfort. Beyond headlines.
+
+The United Hell is a premium, AI-powered discovery platform that combines news,
+discovery, learning, storytelling, exploration, science, history, wildlife,
+technology, culture, and success stories into one intelligent journal.
+
+## Pages
+- [Today's front page](/): Today's most important discoveries.
+- [Daily Earth Briefing](/briefing): A daily curated digest of the planet's most important stories.
+- [Discover](/discover): Browse twenty-five intellectual fields, from archaeology to ocean exploration.
+- [World](/map): Stories filed by country.
+- [Trending](/trending): What readers are reading, by week and month.
+- [Search](/search): Search the archive.

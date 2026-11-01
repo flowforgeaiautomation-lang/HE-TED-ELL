@@ -1,0 +1,43 @@
+-- Populate vocabulary_cache with the words shown in the diarrhoea article's Vocabulary Builder
+
+INSERT INTO vocabulary_cache (word, part_of_speech, meaning, simple_explanation, example, synonyms, antonyms, pronunciation, source, search_count)
+VALUES
+  ('positive', 'noun', 'A thing capable of being affirmed; something real or actual.',
+   'Something that is definitely present or real.',
+   'The report described a positive that shaped the outcome.',
+   ARRAY['certainty', 'fact', 'reality'],
+   ARRAY['negative', 'doubt'],
+   '/ˈpɒzɪtɪv/', 'dictionary', 1),
+  ('parasite', 'noun', 'A person who lives on other people''s efforts or expense and gives little or nothing back.',
+   'An organism that lives on or in another organism and gets food from it.',
+   'Lice, fleas, ticks and mites are widely spread parasites.',
+   ARRAY['leech', 'sponger', 'freeloader'],
+   ARRAY['commensal', 'mutualist', 'symbiote'],
+   '/ˈpæɹəˌsaɪt/', 'dictionary', 1),
+  ('explosive', 'noun', 'Any explosive substance.',
+   'A substance that can burst violently.',
+   'The report described an explosive that shaped the outcome.',
+   ARRAY['blast', 'detonator', 'dynamite'],
+   ARRAY[]::text[],
+   NULL, 'dictionary', 1),
+  ('diarrhoea', 'noun', 'A gastrointestinal disorder characterized by frequent and very fluid or watery bowel movements.',
+   'Frequent watery bowel movements.',
+   'The report described a diarrhoea that shaped the outcome.',
+   ARRAY['runs', 'shits', 'skitters', 'squirts', 'squits'],
+   ARRAY[]::text[],
+   NULL, 'dictionary', 1),
+  ('outbreak', 'noun', 'An eruption; the sudden appearance of a rash, disease, etc.',
+   'A sudden start of disease or violence.',
+   'Any epidemic outbreak causes understandable panic.',
+   ARRAY['outburst', 'tumult'],
+   ARRAY['inbreak'],
+   '/ˈaʊtbɹeɪk/', 'dictionary', 1)
+ON CONFLICT (word) DO UPDATE SET
+  meaning = EXCLUDED.meaning,
+  simple_explanation = EXCLUDED.simple_explanation,
+  example = EXCLUDED.example,
+  synonyms = EXCLUDED.synonyms,
+  antonyms = EXCLUDED.antonyms,
+  pronunciation = EXCLUDED.pronunciation,
+  source = EXCLUDED.source,
+  updated_at = now();

@@ -1,0 +1,25 @@
+project_id = "myrteqlcfwckgdokzzhg"
+
+[functions.fetch-news-articles]
+verify_jwt = false
+
+[functions.fix-database]
+verify_jwt = false
+
+[functions.fix-deks]
+verify_jwt = false
+
+[functions.backfill-vocab]
+verify_jwt = false
+
+[functions.update-market-prices]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.libretranslate-proxy]
+verify_jwt = false
+
+[functions.get-config]
+verify_jwt = false

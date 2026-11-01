@@ -1,0 +1,503 @@
+import { createServerFn } from "@tanstack/react-start";
+import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import type { Database } from "@/integrations/supabase/types";
+import type { Article, ArticleSummary, Briefing, CommentRow, VocabEntry } from "./types";
+import { lookupWords } from "./dictionary.server";
+import { relatedCategorySlugs } from "./categories";
+
+function publicClient() {
+  return createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
+  );
+}
+
+const summaryCols =
+  "id,slug,title,dek,category,subcategory,cover_image_url,read_time_minutes,country_code,featured_slot,published_at,view_count,like_count,bookmark_count,comment_count";
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  ldquo: "\u201C", rdquo: "\u201D", lsquo: "\u2018", rsquo: "\u2019",
+  hellip: "\u2026", mdash: "\u2014", ndash: "\u2013", trade: "\u2122",
+  copy: "\u00A9", reg: "\u00AE", deg: "\u00B0", middot: "\u00B7",
+};
+
+function decodeEntities(input: unknown): string {
+  if (typeof input !== "string" || !input) return (input as string) ?? "";
+  return input
+    .replace(/&#(\d+);/g, (_, n) => {
+      const code = parseInt(n, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => {
+      const code = parseInt(h, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
+}
+
+function decodeListMaybe<T>(items: T): T {
+  if (!Array.isArray(items)) return items;
+  return items.map((s) => (typeof s === "string" ? decodeEntities(s) : s)) as unknown as T;
+}
+
+function decodeSummary<T extends { title?: string | null; dek?: string | null }>(row: T): T {
+  return {
+    ...row,
+    title: row.title ? decodeEntities(row.title) : row.title,
+    dek: row.dek ? decodeEntities(row.dek) : row.dek,
+  };
+}
+
+function normalizeText(s = "") {
+  return s.toLowerCase().replace(/[^a-z0-9\s]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function dedupeSummaries(rows: ArticleSummary[], limit: number) {
+  const seen = new Set<string>();
+  const out: ArticleSummary[] = [];
+  for (const raw of rows) {
+    const row = decodeSummary(raw);
+    const key = normalizeText(row.title || row.dek || row.slug);
+    const softKey = normalizeText(row.dek || row.title).slice(0, 110);
+    if (!key || seen.has(row.id) || seen.has(key) || (softKey && seen.has(softKey))) continue;
+    seen.add(row.id);
+    seen.add(key);
+    if (softKey) seen.add(softKey);
+    out.push(row);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function looksVague(text?: string | null) {
+  if (!text) return true;
+  return /original source|the united hell is preserving|broader impact depends|verified new development|reliable, recent information|full primary account|future coverage in this field|published this article|this is a current|readers should check|category:/i.test(text);
+}
+
+function cleanStoryText(text?: string | null) {
+  if (!text) return undefined;
+  const decoded = decodeEntities(text);
+  const cleaned = decoded
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line && !/published this article|published by|source says|readers should check|category:/i.test(line))
+    .join("\n\n")
+    .replace(/\b(According to|Per|As reported by|Reported by|As per|A report by|Writing for)\s+(the\s+)?[A-Z][A-Za-z0-9 .'&-]{1,40}(,|\s+said|\s+reported|\s+wrote|\s+noted)?\s*/g, "")
+    .replace(/\b(Reuters|BBC(?:\s+News)?|GNews|NewsAPI|The Hindu|Times of India|Associated Press|AP News|The Associated Press|The Guardian|New York Times|NYT|CNN|Al Jazeera|Bloomberg|Financial Times|Washington Post|NPR|Fox News|Sky News|France ?24|Deutsche Welle|DW|NDTV|Hindustan Times|Indian Express)\b/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+  return cleaned && !looksVague(cleaned) ? cleaned : undefined;
+}
+
+function splitParagraphs(text?: string) {
+  return (text || "")
+    .split(/\n{2,}|\r?\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+function uniqueList(items?: (string | null | undefined)[] | null, compareAgainst: string[] = [], limit = 6) {
+  const out: string[] = [];
+  const normalizedAgainst = new Set(compareAgainst.map(normalizeText));
+  for (const item of cleanList(items) || []) {
+    const key = normalizeText(item);
+    if (!key || normalizedAgainst.has(key) || out.some((old) => normalizeText(old) === key)) continue;
+    // Also drop bullets that are near-duplicates (substring containment) of already-kept bullets.
+    if (out.some((old) => key.length > 18 && (key.includes(normalizeText(old)) || normalizeText(old).includes(key)))) continue;
+    out.push(item);
+    if (out.length >= limit) break;
+  }
+  return out.length ? out : undefined;
+}
+
+// Split prose into sentences for cross-section dedup.
+function splitSentences(text?: string | null): string[] {
+  if (!text) return [];
+  return text
+    .replace(/\n+/g, " ")
+    .split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+// Remove sentences from `target` that already appear (normalized) in `keep`.
+function dedupeSentencesAgainst(target: string, keep: string[]): string | undefined {
+  if (!target) return undefined;
+  const keepSet = new Set(keep.map(normalizeText));
+  const filtered = splitSentences(target).filter((s) => {
+    const key = normalizeText(s);
+    if (key.length < 24) return true; // keep short clauses/labels
+    return !keepSet.has(key);
+  });
+  const out = filtered.join(" ").replace(/\s+/g, " ").trim();
+  return out || undefined;
+}
+
+async function buildVocabularyFromText(text: string, existing?: Article["story"]["vocabulary"]): Promise<VocabEntry[]> {
+  const normalized = normalizeText(text);
+  const blocked = new Set(["article", "source", "report", "update", "people", "official", "information", "development", "government", "national", "regional", "general", "several", "however", "various", "whether", "against", "already", "although", "instead", "despite", "further", "certain", "because", "through", "between", "another", "current", "reported", "statement", "including", "thursday", "friday", "wednesday", "tuesday", "monday", "saturday", "sunday", "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]);
+  const keep = (existing || [])
+    .filter((v) => v?.word && v.meaning)
+    .filter((v) => !/an important (word|term) used in this story/i.test(v.meaning ?? ""))
+    .filter((v, index, arr) => arr.findIndex((other) => normalizeText(other.word) === normalizeText(v.word)) === index)
+    .slice(0, 5) as VocabEntry[];
+  if (keep.length >= 4) return keep;
+  const candidates = Array.from(new Set((text.match(/\b[A-Za-z][A-Za-z-]{6,}\b/g) || []).map((w) => w.replace(/^-|-$/g, ""))))
+    .filter((word) => !blocked.has(word.toLowerCase()))
+    .filter((word) => !keep.some((v) => normalizeText(v.word) === normalizeText(word)))
+    .slice(0, 20);
+  const enriched = await lookupWords(candidates);
+  for (const entry of enriched) {
+    if (entry.meaning && !/an important (word|term) used in this story/i.test(entry.meaning)) {
+      keep.push(entry);
+      if (keep.length >= 5) break;
+    }
+  }
+  return keep.slice(0, 5);
+}
+
+function cleanList(items?: (string | null | undefined)[] | null): string[] | undefined {
+  if (!Array.isArray(items)) return undefined;
+  const cleaned = items
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter((s) => s.length > 0 && !looksVague(s));
+  return cleaned.length ? cleaned : undefined;
+}
+
+async function normalizeArticle(article: Article): Promise<Article> {
+  const currentStory = article.story ?? {};
+  const dec = (s?: string | null) => (s ? decodeEntities(s) : s);
+  const decClean = (s?: string | null) => cleanStoryText(s);
+  const summary = decClean((currentStory as any).summary) || decClean(article.dek);
+  const proseParts = [
+    decClean((currentStory as any).main_story),
+    decClean(currentStory.what),
+    decClean(currentStory.why),
+    decClean(currentStory.how),
+    decClean(currentStory.before),
+    decClean(currentStory.next),
+    decClean(currentStory.why_should_i_care),
+    decClean(currentStory.how_affects_world),
+    decClean(currentStory.what_can_we_learn),
+    decClean(currentStory.why_interesting),
+    decClean(currentStory.did_you_know),
+    decClean(currentStory.future_impact),
+  ].filter(Boolean) as string[];
+  const mainStory = proseParts.length
+    ? proseParts
+        .flatMap(splitParagraphs)
+        .filter((paragraph, index, arr) => arr.findIndex((other) => normalizeText(other) === normalizeText(paragraph)) === index)
+        .join("\n\n")
+    : undefined;
+
+  // Build a set of sentences already used in summary + main story so secondary
+  // sections never repeat them. This is the cross-section dedup that makes old
+  // articles feel less stitched-together.
+  const primarySentences = new Set<string>();
+  for (const s of splitSentences(summary)) primarySentences.add(normalizeText(s));
+  for (const s of splitSentences(mainStory)) primarySentences.add(normalizeText(s));
+
+  const dedupeProse = (text?: string | null): string | undefined => {
+    const cleaned = decClean(text);
+    if (!cleaned) return undefined;
+    const kept = splitSentences(cleaned).filter((s) => {
+      const key = normalizeText(s);
+      if (key.length < 24) return true;
+      return !primarySentences.has(key);
+    });
+    const out = kept.join(" ").replace(/\s+/g, " ").trim();
+    return out || undefined;
+  };
+
+  const keyDevelopments = uniqueList((currentStory as any).key_developments || currentStory.key_facts || currentStory.key_takeaways, [], 5);
+  const quickInsights = uniqueList((currentStory as any).quick_insights || currentStory.quick_facts || currentStory.insights, keyDevelopments || [], 6);
+  const readerTakeaways = uniqueList((currentStory as any).reader_takeaways || currentStory.key_takeaways, quickInsights || [], 5);
+  const allText = [summary, mainStory, decClean((currentStory as any).background), decClean((currentStory as any).expert_analysis), decClean((currentStory as any).why_it_matters)].filter(Boolean).join(" ");
+
+  // Filter out vocabulary entries with placeholder/generic meanings or broken examples.
+  const BAD_VOCAB_MEANING = /\b(important word|word used|used in this story|key word|significant term)\b/i;
+  const rawVocab = (currentStory as any).vocabulary?.map((v: any) => ({
+    word: dec(v.word) || undefined,
+    partOfSpeech: v.part_of_speech || v.partOfSpeech || undefined,
+    meaning: dec(v.meaning) || undefined,
+    simpleExplanation: (dec(v.simple_explanation) || dec(v.simpleExplanation) || undefined)?.replace(/^In simple terms:\s*/i, ""),
+    example: v.example ? dec(v.example) : undefined,
+    synonyms: v.synonyms || undefined,
+    antonyms: v.antonyms || undefined,
+    pronunciation: v.pronunciation || v.phonetic || undefined,
+  })).filter((v: any) => v.word && v.meaning && !BAD_VOCAB_MEANING.test(v.meaning)) || [];
+
+  return {
+    ...article,
+    title: dec(article.title) ?? article.title,
+    dek: dec(article.dek) ?? article.dek,
+    story: {
+      ...currentStory,
+      // New fields
+      summary,
+      main_story: mainStory,
+      background: dedupeProse((currentStory as any).background),
+      key_developments: decodeListMaybe(keyDevelopments),
+      quick_insights: decodeListMaybe(quickInsights),
+      why_it_matters: dedupeProse((currentStory as any).why_it_matters || currentStory.why_should_i_care || currentStory.how_affects_world),
+      expert_analysis: dedupeProse((currentStory as any).expert_analysis),
+      timeline: decodeListMaybe(cleanList((currentStory as any).timeline)),
+      key_numbers: Array.isArray((currentStory as any).key_numbers) ? (currentStory as any).key_numbers : undefined,
+      people: Array.isArray((currentStory as any).people) ? (currentStory as any).people : undefined,
+      organizations: Array.isArray((currentStory as any).organizations) ? (currentStory as any).organizations : undefined,
+      countries: Array.isArray((currentStory as any).countries) ? (currentStory as any).countries : undefined,
+      did_you_know: decClean((currentStory as any).did_you_know),
+      historical_context: dedupeProse((currentStory as any).historical_context || currentStory.before),
+      future_outlook: dedupeProse((currentStory as any).future_outlook || currentStory.future_impact || currentStory.next),
+      reader_takeaways: decodeListMaybe(readerTakeaways),
+      what_happens_next: dedupeProse((currentStory as any).what_happens_next),
+      vocabulary: await buildVocabularyFromText(allText, rawVocab),
+      sources: decodeListMaybe(cleanList((currentStory as any).sources)),
+      // Legacy fields
+      qa: undefined,
+      what: decClean(currentStory.what),
+      why: decClean(currentStory.why),
+      next: decClean(currentStory.next),
+      why_should_i_care: decClean(currentStory.why_should_i_care),
+      how_affects_world: decClean(currentStory.how_affects_world),
+      what_can_we_learn: decClean(currentStory.what_can_we_learn),
+      why_interesting: decClean(currentStory.why_interesting),
+      how: decClean(currentStory.how),
+      before: decClean(currentStory.before),
+      future_impact: decClean(currentStory.future_impact),
+      key_facts: decodeListMaybe(cleanList(currentStory.key_facts)),
+      quick_facts: decodeListMaybe(cleanList(currentStory.quick_facts)),
+      key_takeaways: decodeListMaybe(cleanList(currentStory.key_takeaways)),
+      insights: decodeListMaybe(cleanList(currentStory.insights)),
+    },
+  };
+}
+
+export const listArticles = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        category: z.string().optional(),
+        country: z.string().optional(),
+        limit: z.number().int().min(1).max(60).default(24),
+        offset: z.number().int().min(0).default(0),
+        sort: z.enum(["recent", "trending", "most_read", "most_saved"]).default("recent"),
+      })
+      .parse(d ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const categorySlugs = relatedCategorySlugs(data.category);
+    let q = supabase.from("articles").select(summaryCols).eq("is_published", true);
+    if (data.category && categorySlugs.length) q = q.in("category", categorySlugs);
+    if (data.country) q = q.eq("country_code", data.country);
+    if (data.sort === "trending" || data.sort === "most_read")
+      q = q.order("view_count", { ascending: false });
+    else if (data.sort === "most_saved") q = q.order("bookmark_count", { ascending: false });
+    else q = q.order("published_at", { ascending: false });
+    const fetchLimit = Math.max(data.limit, 24) + data.offset + 24;
+    const { data: rows, error } = await q.range(0, fetchLimit - 1);
+    if (error) throw new Error(error.message);
+    let result = dedupeSummaries(((rows ?? []) as ArticleSummary[]).slice(data.offset), data.limit);
+    if (data.category && !data.country && result.length < Math.min(20, data.limit)) {
+      const { data: fallbackRows, error: fallbackError } = await supabase
+        .from("articles")
+        .select(summaryCols)
+        .eq("is_published", true)
+        .order("published_at", { ascending: false })
+        .limit(80);
+      if (fallbackError) throw new Error(fallbackError.message);
+      result = dedupeSummaries([...result, ...((fallbackRows ?? []) as ArticleSummary[])], data.limit);
+    }
+    return result;
+  });
+
+export const getFeatured = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("articles")
+    .select(summaryCols)
+    .eq("is_published", true)
+    .not("featured_slot", "is", null)
+    .order("published_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  // Keep latest per slot.
+  const bySlot = new Map<string, ArticleSummary>();
+  for (const a of (data ?? []) as ArticleSummary[]) {
+    if (a.featured_slot && !bySlot.has(a.featured_slot)) bySlot.set(a.featured_slot, a);
+  }
+  return Object.fromEntries(bySlot) as Record<string, ArticleSummary>;
+});
+
+export const getArticleBySlug = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ slug: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: row, error } = await supabase
+      .from("articles")
+      .select("*")
+      .eq("slug", data.slug)
+      .eq("is_published", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) return null;
+    // fire-and-forget view bump
+    supabase.rpc as unknown;
+    await supabase.from("articles").update({ view_count: (row.view_count ?? 0) + 1 }).eq("id", row.id);
+    return await normalizeArticle(row as unknown as Article);
+  });
+
+export const getRelated = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) =>
+    z.object({ category: z.string(), excludeSlug: z.string(), limit: z.number().default(4) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: rows, error } = await supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true)
+      .eq("category", data.category)
+      .neq("slug", data.excludeSlug)
+      .order("published_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ArticleSummary[];
+  });
+
+export const searchArticles = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ q: z.string().min(1).max(120) }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const term = `%${data.q.replace(/[%_]/g, " ")}%`;
+    const { data: rows, error } = await supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true)
+      .or(`title.ilike.${term},dek.ilike.${term},category.ilike.${term}`)
+      .order("published_at", { ascending: false })
+      .limit(40);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as ArticleSummary[];
+  });
+
+export const getCountryStats = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("articles")
+    .select("country_code")
+    .eq("is_published", true)
+    .not("country_code", "is", null);
+  if (error) throw new Error(error.message);
+  const counts: Record<string, number> = {};
+  for (const r of (data ?? []) as { country_code: string }[]) {
+    counts[r.country_code] = (counts[r.country_code] ?? 0) + 1;
+  }
+  return counts;
+});
+
+export const getBriefingToday = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("briefings")
+    .select("*")
+    .order("briefing_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const briefing = (data ?? null) as Briefing | null;
+
+  // Always return a populated briefing, even when none has been generated yet.
+  // We assemble it on the fly from the latest published articles so the section is
+  // never empty for the reader.
+  const pickItems = (rows: ArticleSummary[]) =>
+    rows.map((r) => ({ slug: r.slug, title: r.title }));
+
+  const buildFromArticles = async (): Promise<Briefing> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const fetchCat = async (cats: string[], limit: number) => {
+      const { data: rows } = await supabase
+        .from("articles")
+        .select(summaryCols)
+        .eq("is_published", true)
+        .in("category", cats)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      return dedupeSummaries((rows ?? []) as ArticleSummary[], limit);
+    };
+    const { data: latest } = await supabase
+      .from("articles")
+      .select(summaryCols)
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(80);
+    const latestRows = dedupeSummaries((latest ?? []) as ArticleSummary[], 60);
+
+    const top = latestRows.slice(0, 8);
+    const [discoveries, science, success, tech] = await Promise.all([
+      fetchCat(["discovery", "world-discovery", "exploration", "amazing-places"], 6),
+      fetchCat(["science", "scientific-discoveries", "physics", "biology", "medicine", "breakthroughs"], 6),
+      fetchCat(["success-stories", "entrepreneurs", "startups", "billionaires", "business-leaders"], 6),
+      fetchCat(["technology", "artificial-intelligence", "innovation", "future-technology", "robotics"], 6),
+    ]);
+
+    return {
+      id: "live",
+      briefing_date: today,
+      intro:
+        briefing?.intro ??
+        "Today's most important stories, drawn from the latest published articles.",
+      sections: {
+        top_stories: pickItems(top),
+        discoveries: pickItems(discoveries.length ? discoveries : latestRows.slice(8, 14)),
+        science: pickItems(science.length ? science : latestRows.slice(14, 20)),
+        success: pickItems(success.length ? success : latestRows.slice(20, 26)),
+        tech: pickItems(tech.length ? tech : latestRows.slice(26, 32)),
+        facts: briefing?.sections?.facts,
+      },
+    } as Briefing;
+  };
+
+  if (!briefing) return buildFromArticles();
+
+  const sections = briefing.sections ?? ({} as Briefing["sections"]);
+  const isEmpty =
+    !sections.top_stories?.length &&
+    !sections.discoveries?.length &&
+    !sections.science?.length &&
+    !sections.success?.length &&
+    !sections.tech?.length;
+  if (isEmpty) return buildFromArticles();
+  return briefing;
+});
+
+export const listComments = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ articleId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const supabase = publicClient();
+    const { data: rows, error } = await supabase
+      .from("comments")
+      .select("id,article_id,user_id,parent_id,prompt_type,body,like_count,created_at,profiles!comments_user_id_fkey(username,display_name,avatar_url)")
+      .eq("article_id", data.articleId)
+      .eq("is_hidden", false)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    if (error) {
+      // join hint may differ; fall back without profile join
+      const { data: alt } = await supabase
+        .from("comments")
+        .select("id,article_id,user_id,parent_id,prompt_type,body,like_count,created_at")
+        .eq("article_id", data.articleId)
+        .eq("is_hidden", false)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      return (alt ?? []) as CommentRow[];
+    }
+    return (rows ?? []).map((r: Record<string, unknown>) => ({
+      ...(r as object),
+      author: (r as { profiles?: CommentRow["author"] }).profiles ?? null,
+    })) as CommentRow[];
+  });
