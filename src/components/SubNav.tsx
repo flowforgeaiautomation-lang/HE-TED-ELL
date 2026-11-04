@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
-import { ChevronDown, LayoutGrid, Menu as MenuIcon, BookOpen, Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ChevronDown, LayoutGrid, MoreHorizontal, BookOpen, Sparkles } from "lucide-react";
 import { CategoryModal } from "./CategoryModal";
 
 const NAV = [
@@ -21,13 +21,9 @@ const NAV = [
  * Desktop layout above is unchanged; this row is additive on every page.
  */
 export function SubNav() {
-  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  const activeNav = NAV.find((n) => n.to === location.pathname);
-  const activeLabel = activeNav?.label ?? "Today";
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -49,15 +45,17 @@ export function SubNav() {
       <div className="container-edit overflow-x-auto scrollbar-hide py-3">
         <div className="flex min-w-max items-center justify-between gap-2 sm:gap-3">
         {/* Left: Menu dropdown */}
-        <div className="relative shrink-0 lg:hidden" ref={menuRef}>
+        <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="flex items-center gap-1.5 border border-foreground/80 px-2.5 sm:px-3 py-1.5 text-[0.68rem] sm:text-[0.72rem] uppercase tracking-[0.14em] sm:tracking-[0.18em] hover:bg-foreground hover:text-background transition whitespace-nowrap"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
+            aria-label="Open all pages menu"
+            title="All pages"
           >
-            <MenuIcon className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate max-w-[7rem] sm:max-w-none">{activeLabel}</span>
+            <MoreHorizontal className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">Menu</span>
             <ChevronDown className="h-3.5 w-3.5 opacity-70 shrink-0" />
           </button>
           {menuOpen && (
