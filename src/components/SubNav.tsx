@@ -108,11 +108,11 @@ export function SubNav() {
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto lg:ml-0">
           <Link
             to="/discovery"
-            className="flex items-center gap-1 border border-foreground px-2.5 sm:px-3 py-1.5 text-[0.68rem] sm:text-[0.72rem] uppercase tracking-[0.14em] sm:tracking-[0.18em] bg-foreground text-background hover:bg-transparent hover:text-foreground transition rounded-full whitespace-nowrap"
+            className="flex items-center gap-1 border border-foreground px-2.5 sm:px-3 py-1.5 text-[0.68em] sm:text-[0.72rem] uppercase tracking-[0.14em] sm:tracking-[0.18em] bg-foreground text-background hover:bg-transparent hover:text-foreground transition rounded-full whitespace-nowrap"
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden sm:inline">Daily Discovery</span>
-            <span className="sm:hidden">Daily</span>
+            <span className="sm:hidden">Daily Discovery</span>
           </Link>
           <button
             onClick={() => setCatOpen(true)}
