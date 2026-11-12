@@ -8,15 +8,15 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useReadingPrefs } from "@/hooks/use-reading-prefs";
 import { applyReadingPrefs } from "@/lib/apply-reading-prefs";
 
-
-
 const NAV = [
   { to: "/briefing", label: "Daily Briefing", icon: undefined },
   { to: "/today", label: "Today", icon: undefined },
+  { to: "/discovery", label: "Daily Discovery", icon: "BookOpen" },
   { to: "/discover", label: "Discover", icon: undefined },
   { to: "/trending", label: "Trending", icon: undefined },
+  { to: "/top10", label: "Top 10", icon: undefined },
   { to: "/markets", label: "Markets", icon: undefined },
-  { to: "/editions", label: "Editions", icon: "BookOpen" },
+  { to: "/editions", label: "Editions", icon: undefined },
   { to: "/information", label: "Information", icon: undefined },
 ];
 
@@ -92,21 +92,16 @@ export function SiteHeader() {
     update({ theme: nextTheme });
   }
 
-
   return (
     <header
       className={`glass-header border-b rule sticky top-0 z-40 transition-transform duration-300 ${isHidden ? "-translate-y-full" : "translate-y-0"}`}
     >
       <div className="container-edit">
-        {/* Masthead */}
         <div className="flex items-center justify-between py-4 lg:py-6 gap-2 lg:gap-3">
-          {/* Left side */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Desktop date (3-line Panchang) */}
             <div className="hidden lg:block">
               <PanchangDisplay />
             </div>
-            {/* Mobile / tablet hamburger */}
             <button
               aria-label="menu"
               onClick={() => setOpen((v) => !v)}
@@ -116,7 +111,6 @@ export function SiteHeader() {
             </button>
           </div>
 
-          {/* Center: Title (takes remaining space) */}
           <div className="flex-1 min-w-0 flex items-center justify-center text-center px-1">
             <Link to="/" search={{ category: undefined }} className="inline-block max-w-full">
               <div className="font-serif text-[1.05rem] sm:text-xl lg:text-5xl font-semibold tracking-tight leading-tight uppercase truncate">
@@ -128,7 +122,6 @@ export function SiteHeader() {
             </Link>
           </div>
 
-          {/* Right: Translate control (always visible, prominent) + Icons */}
           <div className="flex items-center gap-1 md:gap-2 shrink-0 justify-end">
             <div className="flex items-center order-first sm:order-none">
               <LanguageSwitcher />
@@ -158,7 +151,6 @@ export function SiteHeader() {
           </div>
         </div>
 
-        {/* Desktop primary nav — unchanged */}
         <nav className="hidden lg:block border-t rule">
           <ul className="flex lg:justify-center lg:gap-10 py-3 text-[0.82rem] uppercase tracking-[0.18em] font-medium">
             {NAV.map((n) => {
@@ -193,10 +185,8 @@ export function SiteHeader() {
           </ul>
         </nav>
 
-        {/* Mobile / tablet hamburger panel */}
         {open && (
           <div className="lg:hidden border-t rule py-5 max-h-[75vh] overflow-y-auto">
-            {/* 3-line Panchang date, same as desktop */}
             <div className="mb-5">
               <PanchangDisplay />
             </div>
@@ -260,10 +250,7 @@ export function SiteHeader() {
         )}
       </div>
 
-      {/* Mobile/tablet only: secondary nav (Today menu + Categories popup). Desktop unchanged. */}
-      <div className="lg:hidden">
-        <SubNav />
-      </div>
+      <SubNav />
     </header>
   );
 }
