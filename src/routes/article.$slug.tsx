@@ -11,7 +11,7 @@ import { categoryLabel } from "@/lib/categories";
 
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Quote, Lightbulb, Clock, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, CornerDownRight, Trash2 } from "lucide-react";
+import { Quote, Lightbulb, TrendingUp, Users, Building2, Globe2, Hash, Sparkles, Info, Bookmark, ChevronRight, ArrowBigUp, MessageCircle, CornerDownRight, Trash2 } from "lucide-react";
 import type { CommentRow, ArticleStory, KeyNumber, PersonInvolved, OrganizationInvolved, CountryInvolved, VocabEntry } from "@/lib/types";
 import { SmartImage } from "@/components/SmartImage";
 import { ReadingExperience } from "@/components/ReadingExperience";
@@ -161,6 +161,18 @@ function ArticlePage() {
 
   const { prefs } = useReadingPrefs();
   useLiveTranslation();
+
+  // Scroll restoration: save position on navigate away, restore on return
+  useEffect(() => {
+    const key = `scroll:${slug}`;
+    const saved = sessionStorage.getItem(key);
+    if (saved) {
+      requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
+    }
+    return () => {
+      sessionStorage.setItem(key, String(window.scrollY));
+    };
+  }, [slug]);
 
   const displayTitle = translation?.title ?? article?.title;
   const displayDek = translation ? translation.dek : article?.dek;
