@@ -9,17 +9,12 @@ const NAV = [
   { to: "/discovery", label: "Daily Discovery", icon: "sparkles" },
   { to: "/discover", label: "Discover" },
   { to: "/trending", label: "Trending" },
+  { to: "/top10", label: "Top 10" },
   { to: "/editions", label: "Editions", icon: "book" },
   { to: "/information", label: "Information" },
   { to: "/bookmarks", label: "Library" },
 ];
 
-/**
- * Site-wide secondary bar shown directly under the masthead on every page.
- * Left:  "Menu" dropdown (Today, Daily Briefing, Discover, Trending, Information, Library)
- * Right: "Categories" button — opens the full Explore-All-Fields modal.
- * Desktop layout above is unchanged; this row is additive on every page.
- */
 export function SubNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);

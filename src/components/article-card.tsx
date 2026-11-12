@@ -3,7 +3,7 @@ import type { ArticleSummary } from "@/lib/types";
 import { categoryLabel } from "@/lib/categories";
 import { fallbackCoverUrl } from "@/lib/article-images";
 import { SmartImage } from "@/components/SmartImage";
-import { Clock } from "lucide-react";
+
 
 export function ArticleCard({
   article,
@@ -23,10 +23,6 @@ function Meta({ article }: { article: ArticleSummary }) {
     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
       <span className="inline-flex items-center rounded-full bg-foreground/5 border rule px-2.5 py-1 uppercase tracking-widest font-medium">
         {categoryLabel(article.category)}
-      </span>
-      <span className="inline-flex items-center gap-1">
-        <Clock className="h-3 w-3" />
-        {article.read_time_minutes} min
       </span>
     </div>
   );

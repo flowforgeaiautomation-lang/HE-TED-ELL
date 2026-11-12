@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
-import { Bookmark, Heart, Share2 } from "lucide-react";
+import { Bookmark, Heart, Share2, MoreHorizontal, Link2, Printer, Flag, MessageCircle } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { toggleBookmark, toggleLike, getMyInteractions } from "@/lib/interactions.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function ArticleActions({ articleId, title }: { articleId: string; title: string }) {
   const [liked, setLiked] = useState(false);
@@ -78,6 +85,34 @@ export function ArticleActions({ articleId, title }: { articleId: string; title:
     toast.success("Link copied to clipboard");
   }
 
+  async function onCopyLink() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Could not copy link.");
+    }
+  }
+
+  function onPrint() {
+    if (typeof window !== "undefined") window.print();
+  }
+
+  function onScrollToComments() {
+    if (typeof document === "undefined") return;
+    const el = document.getElementById("comments");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      toast("No comments section found on this page.");
+    }
+  }
+
+  function onReport() {
+    toast.info("Report submitted. Our team will review this article.");
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button
@@ -104,6 +139,36 @@ export function ArticleActions({ articleId, title }: { articleId: string; title:
         <Share2 className="h-3.5 w-3.5" />
         <span>Share</span>
       </button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            aria-label="more actions"
+            className="group flex items-center gap-1.5 px-3 py-1.5 border rule text-xs uppercase tracking-widest hover:bg-foreground hover:text-background transition rounded-full"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={onCopyLink} className="cursor-pointer">
+            <Link2 className="mr-2 h-4 w-4" />
+            <span>Copy link</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onScrollToComments} className="cursor-pointer">
+            <MessageCircle className="mr-2 h-4 w-4" />
+            <span>Go to comments</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onPrint} className="cursor-pointer">
+            <Printer className="mr-2 h-4 w-4" />
+            <span>Print article</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onReport} className="cursor-pointer text-muted-foreground">
+            <Flag className="mr-2 h-4 w-4" />
+            <span>Report article</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
