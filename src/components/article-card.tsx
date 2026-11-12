@@ -88,7 +88,7 @@ function DefaultCard({ article }: { article: ArticleSummary }) {
         <h3 className="display-3 group-hover:underline decoration-1 underline-offset-4">
           {article.title}
         </h3>
-        {article.dek && <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">{article.dek}</p>}
+        {article.dek && <p className="text-sm text-muted-foreground leading-relaxed">{article.dek}</p>}
       </div>
     </Link>
   );
