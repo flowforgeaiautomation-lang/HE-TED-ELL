@@ -14,7 +14,7 @@ import { PageEndAd } from "@/components/ads/EzoicAd";
 const todayQuery = (country: string | undefined) =>
   queryOptions({
     queryKey: ["today-clean", country ?? "world"],
-    queryFn: () => listArticles({ data: { limit: 24, country, todayOnly: true } }),
+    queryFn: () => listArticles({ data: { limit: 24, country } }),
     staleTime: 30_000,
   });
 
@@ -187,7 +187,6 @@ function TodayPage() {
 
   return (
     <div className="container-edit py-6 md:py-8">
-      {/* Clean header — no category filter block */}
       <div className="flex items-center justify-between border-b rule pb-3 mb-8">
         <div className="kicker">
           {country === "WORLD"
@@ -195,7 +194,6 @@ function TodayPage() {
             : `Today's News — ${COUNTRY_LABELS[country] ?? country}`}
         </div>
         <div className="flex items-center gap-3">
-          {/* Country quick-switch */}
           <select
             value={country}
             onChange={(e) => {
@@ -226,7 +224,6 @@ function TodayPage() {
         </div>
       </div>
 
-      {/* Clean article grid — no Discover category block */}
       {articles.length > 0 && (
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-3">
           {articles.map((article, i) => (
