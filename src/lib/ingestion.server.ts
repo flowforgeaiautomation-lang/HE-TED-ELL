@@ -752,8 +752,9 @@ async function fromReddit(): Promise<RawItem[]> {
 async function fromFinancialAPIs(): Promise<RawItem[]> {
   const out: RawItem[] = [];
   const now = new Date().toISOString();
-  const finnhubKey = process.env.FINNHUB_API_KEY || "d9kccs1r01qq9sqfu130d9kccs1r01qq9sqfu13g";
-  const fmpKey = process.env.FMP_API_KEY || "Gmej9XaScIABNc9kxCZ8aDO6g8zeVuJx";
+  const finnhubKey = process.env.FINNHUB_API_KEY || "";
+  const fmpKey = process.env.FMP_API_KEY || "";
+  if (!finnhubKey && !fmpKey) return out;
 
   try {
     const movers = await fetchJson(`https://finnhub.io/api/v1/stock/market-news?category=general&token=${finnhubKey}`);
@@ -969,7 +970,8 @@ async function fromOBISMarine(): Promise<RawItem[]> {
 async function fromCrossrefRecent(): Promise<RawItem[]> {
   const mailto = process.env.CROSSREF_MAILTO || "contact@theunitedhell.in";
   const out: RawItem[] = [];
-  const filters = ["type:journal-article", "from-pub-date:2026-10-01"];
+  const sinceDate = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+  const filters = ["type:journal-article", `from-pub-date:${sinceDate}`];
   try {
     const d = await fetchJson(`https://api.crossref.org/works?filter=${filters.join(",")}&rows=12&select=title,abstract,URL,published,container-title&mailto=${mailto}`);
     if (!d?.message?.items) return [];
@@ -2055,6 +2057,35 @@ function describeQualityFailures(out: Processed, sourceBody: string, storedTextM
       }
     }
   }
+  // Cross-section distinctness: detect paraphrased content shared between any two prose sections
+  const proseSections: Array<{ name: string; text: string }> = [
+    { name: "summary", text: story.summary || "" },
+    { name: "main_story", text: story.main_story || "" },
+    { name: "what_happened", text: story.what_happened || "" },
+    { name: "why_it_matters", text: story.why_it_matters || "" },
+    { name: "how_it_happened", text: story.how_it_happened || "" },
+    { name: "who_and_where", text: story.who_and_where || "" },
+    { name: "what_came_before", text: story.what_came_before || "" },
+    { name: "what_happens_next", text: story.what_happens_next || "" },
+    { name: "background", text: story.background || "" },
+    { name: "expert_analysis", text: story.expert_analysis || "" },
+    { name: "historical_context", text: story.historical_context || "" },
+    { name: "future_outlook", text: story.future_outlook || "" },
+  ].filter((s) => s.text && wordCount(s.text) >= 20);
+  for (let i = 0; i < proseSections.length; i++) {
+    for (let j = i + 1; j < proseSections.length; j++) {
+      const aParas = proseSections[i].text.split(/\n{2,}/).filter((p) => wordCount(p) >= 20);
+      const bParas = proseSections[j].text.split(/\n{2,}/).filter((p) => wordCount(p) >= 20);
+      for (const ap of aParas) {
+        for (const bp of bParas) {
+          if (similarity(ap, bp) >= 0.40) {
+            failures.push(`content repeated between ${proseSections[i].name} and ${proseSections[j].name}`);
+            break;
+          }
+        }
+      }
+    }
+  }
   return failures.length ? failures : ["unknown quality issue"];
 }
 
@@ -2181,6 +2212,32 @@ function qualityPass(out: Processed, sourceBody: string, opts?: { storedTextMode
       if (similarity(qi, mp) >= 0.45) return false;
     }
   }
+  // Cross-section distinctness: no two text sections may share paraphrased content.
+  const proseSections: Array<{ name: string; text: string }> = [
+    { name: "summary", text: story.summary || "" },
+    { name: "main_story", text: story.main_story || "" },
+    { name: "what_happened", text: story.what_happened || "" },
+    { name: "why_it_matters", text: story.why_it_matters || "" },
+    { name: "how_it_happened", text: story.how_it_happened || "" },
+    { name: "who_and_where", text: story.who_and_where || "" },
+    { name: "what_came_before", text: story.what_came_before || "" },
+    { name: "what_happens_next", text: story.what_happens_next || "" },
+    { name: "background", text: story.background || "" },
+    { name: "expert_analysis", text: story.expert_analysis || "" },
+    { name: "historical_context", text: story.historical_context || "" },
+    { name: "future_outlook", text: story.future_outlook || "" },
+  ].filter((s) => s.text && wordCount(s.text) >= 20);
+  for (let i = 0; i < proseSections.length; i++) {
+    for (let j = i + 1; j < proseSections.length; j++) {
+      const aParas = proseSections[i].text.split(/\n{2,}/).filter((p) => wordCount(p) >= 20);
+      const bParas = proseSections[j].text.split(/\n{2,}/).filter((p) => wordCount(p) >= 20);
+      for (const ap of aParas) {
+        for (const bp of bParas) {
+          if (similarity(ap, bp) >= 0.40) return false;
+        }
+      }
+    }
+  }
   // Vocabulary example sentences must not be copied from the article.
   const articleLower = normalizeText(story.main_story);
   for (const v of story.vocabulary || []) {
@@ -2230,6 +2287,16 @@ Vocabulary: pick 5-10 words that ACTUALLY APPEAR in the article. Each MUST have 
     if (!out?.title) throw new Error("Initial AI generation returned no title");
     let cleaned = await sanitizeProcessed(out, raw);
     let qualityScore = scoreArticle(cleaned, sourceBody, raw.allowStoredText, raw.title);
+    const qualityReasons1 = describeQualityFailures(cleaned, sourceBody, raw.allowStoredText, raw.title);
+    console.log("[ingest-diag] initial generation:", JSON.stringify({
+      stage: "initialAI", sourceUrl: raw.url, sourceTitle: raw.title,
+      title: cleaned.title?.slice(0, 80), qualityScore,
+      qualityFailures: qualityReasons1, mainStoryWords: wordCount(cleaned.story?.main_story || ""),
+      summaryWords: wordCount(cleaned.story?.summary || ""), vocabCount: (cleaned.story?.vocabulary || []).length,
+      hasWhatHappened: !!cleaned.story?.what_happened, hasWhyItMatters: !!cleaned.story?.why_it_matters,
+      hasBackground: !!cleaned.story?.background, hasHistoricalContext: !!cleaned.story?.historical_context,
+      hasFutureOutlook: !!cleaned.story?.future_outlook, timestamp: new Date().toISOString(),
+    }));
     if (!qualityPass(cleaned, sourceBody, { storedTextMode: raw.allowStoredText, sourceTitle: raw.title }) || qualityScore < 90) {
       // First rewrite with specific failure feedback
       try {
@@ -2311,7 +2378,26 @@ Vocabulary: pick 5-10 words that ACTUALLY APPEAR in the article. Each MUST have 
     }
     return cleaned;
   } catch (e) {
-    console.error("[ingest] AI process failed, using deterministic fallback:", (e as Error).message);
+    const errMsg = (e as Error).message || String(e);
+    const errStack = (e as Error).stack || "";
+    const diag: Record<string, unknown> = {
+      stage: "processItem",
+      sourceUrl: raw.url,
+      sourceName: raw.source,
+      sourceTitle: raw.title,
+      sourceWordCount: wordCount(sourceBody),
+      hasCompleteSource,
+      storedTextMode: !!raw.allowStoredText,
+      error: errMsg,
+      errorType: (e as Error)?.constructor?.name || "Error",
+      timestamp: new Date().toISOString(),
+      hasFullText: fullText.length > 1200,
+      fullTextLength: fullText.length,
+      descriptionWordCount: descriptionWords,
+      allowedCategory: raw.forcedCategory || null,
+      stackPreview: errStack.split("\n").slice(0, 3).join(" | "),
+    };
+    console.error("[ingest-diag] AI process failed:", JSON.stringify(diag));
     const fallback = buildDeterministicArticle(raw, sourceBody);
     if (fallback) {
       try {
@@ -3113,7 +3199,7 @@ export async function backfillVocabulary(opts?: { limit?: number }): Promise<{
   return { attempted: candidates.length, updated, failed, remaining };
 }
 
-export async function reprocessBatch(opts?: { limit?: number; force?: boolean }): Promise<{
+export async function reprocessBatch(opts?: { limit?: number; force?: boolean; articleIds?: string[]; skipQueue?: boolean }): Promise<{
   attempted: number;
   updated: number;
   failed: number;
@@ -3126,7 +3212,9 @@ export async function reprocessBatch(opts?: { limit?: number; force?: boolean })
     .select("id, title, dek, story, sources, category, cover_image_url")
     .order("published_at", { ascending: false })
     .limit(limit);
-  if (!opts?.force) {
+  if (opts?.articleIds && opts.articleIds.length > 0) {
+    query = query.in("id", opts.articleIds);
+  } else if (!opts?.force) {
     query = query.is("reprocessed_at", null);
   }
   const { data: rows } = await query;
@@ -3204,16 +3292,17 @@ export async function reprocessBatch(opts?: { limit?: number; force?: boolean })
     }
 
     if (wordCount(sourceText) < 80) {
-      // Not enough source data — enqueue for retry in case source comes back online
-      await enqueueRegenerationFailure({
-        articleId: row.id,
-        sourceTitle: row.title,
-        sourceUrl,
-        sourceName,
-        category: row.category,
-        coverImageUrl: row.cover_image_url,
-        errorReason: "Not enough source data to regenerate",
-      }).catch(() => {});
+      if (!opts?.skipQueue) {
+        await enqueueRegenerationFailure({
+          articleId: row.id,
+          sourceTitle: row.title,
+          sourceUrl,
+          sourceName,
+          category: row.category,
+          coverImageUrl: row.cover_image_url,
+          errorReason: "Not enough source data to regenerate",
+        }).catch(() => {});
+      }
       await supabase
         .from("articles")
         .update({ reprocessed_at: new Date().toISOString() })
@@ -3235,15 +3324,17 @@ export async function reprocessBatch(opts?: { limit?: number; force?: boolean })
     try {
       const p = await processItem(raw);
       if (!p) {
-        await enqueueRegenerationFailure({
-          articleId: row.id,
-          sourceTitle: row.title,
-          sourceUrl,
-          sourceName,
-          category: row.category,
-          coverImageUrl: row.cover_image_url,
-          errorReason: "AI generation failed quality checks during reprocess",
-        }).catch(() => {});
+        if (!opts?.skipQueue) {
+          await enqueueRegenerationFailure({
+            articleId: row.id,
+            sourceTitle: row.title,
+            sourceUrl,
+            sourceName,
+            category: row.category,
+            coverImageUrl: row.cover_image_url,
+            errorReason: "AI generation failed quality checks during reprocess",
+          }).catch(() => {});
+        }
         failed++;
         return;
       }
