@@ -35,7 +35,6 @@ export function ArticleActions({ articleId, title }: { articleId: string; title:
           setLiked(r.liked.includes(articleId));
           setBookmarked(r.bookmarked.includes(articleId));
         } catch {
-          // ignore
         }
       }
     });
@@ -79,7 +78,7 @@ export function ArticleActions({ articleId, title }: { articleId: string; title:
       try {
         await navigator.share({ title, url });
         return;
-      } catch { /* user cancelled */ }
+      } catch { }
     }
     await navigator.clipboard.writeText(url);
     toast.success("Link copied to clipboard");
