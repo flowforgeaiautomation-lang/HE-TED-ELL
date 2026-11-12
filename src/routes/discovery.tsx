@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Newspaper, Library, ArrowRight, ExternalLink, Sparkles, TrendingUp, Clock } from "lucide-react";
+import { BookOpen, Newspaper, Library, ArrowRight, Sparkles, TrendingUp } from "lucide-react";
 import { SmartImage } from "@/components/SmartImage";
 import { canonicalUrl, SITE_NAME, SITE_LOGO } from "@/lib/seo";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { PageEndAd } from "@/components/ads/EzoicAd";
-import { fallbackCoverUrl } from "@/lib/article-images";
 
 export const Route = createFileRoute("/discovery")({
   head: () => ({
@@ -96,7 +95,6 @@ function DiscoveryPage() {
 
   return (
     <div className="min-h-screen pb-20">
-      {/* Header */}
       <div className="border-b rule bg-background/95 backdrop-blur-xl sticky top-0 z-30">
         <div className="container-edit py-6 text-center">
           <div className="kicker text-xs mb-2">Curated Daily</div>
@@ -107,7 +105,6 @@ function DiscoveryPage() {
         </div>
       </div>
 
-      {/* Tab selector */}
       <div className="container-edit pt-8">
         <div className="w-full overflow-x-auto scrollbar-hide mb-10">
           <div className="flex min-w-max justify-start sm:justify-center gap-3 px-1">
@@ -146,7 +143,6 @@ function DiscoveryPage() {
           </div>
         </div>
 
-        {/* Our Newspaper — always shown first, before tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -194,7 +190,6 @@ function DiscoveryPage() {
           </Link>
         </motion.div>
 
-        {/* Books tab */}
         {activeTab === "books" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -250,7 +245,6 @@ function DiscoveryPage() {
           </motion.div>
         )}
 
-        {/* Newspapers tab — only our own Daily Discovery edition */}
         {activeTab === "newspapers" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -287,7 +281,6 @@ function DiscoveryPage() {
           </motion.div>
         )}
 
-        {/* CTA to explore all TUH content */}
         <div className="mt-16 text-center border-t rule pt-12">
           <h2 className="display-3 mb-4">Explore More from The United Hell</h2>
           <p className="dek max-w-xl mx-auto mb-6">
