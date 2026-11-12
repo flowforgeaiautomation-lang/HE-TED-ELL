@@ -22,6 +22,9 @@ async function lovableChat(opts: {
 function openRouterKeys() {
   return [
     process.env.OPENROUTER_API_KEY,
+    process.env.OPENROUTER_API_KEY_2,
+    process.env.OPENROUTER_API_KEY_3,
+    process.env.OPENROUTER_API_KEY_4,
     process.env.QWEN3_80B_API_KEY,
     process.env.QWEN3_CODER_480B_API_KEY,
   ].filter(Boolean) as string[];
@@ -94,6 +97,8 @@ function openAiKeys(): string[] {
     process.env.OPENAI_API_KEY,
     process.env.OPENAI_API_KEY_2,
     process.env.OPENAI_API_KEY_3,
+    process.env.OPENAI_API,
+    process.env.OPENAI_API_3,
   ].filter(Boolean) as string[];
 }
 
@@ -194,6 +199,8 @@ function geminiKeys(): string[] {
     process.env.GEMINI_API_KEY,
     process.env.GEMINI_API_KEY_2,
     process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4,
+    process.env.GEMINI_API_KEY_5,
   ].filter(Boolean) as string[];
 }
 
@@ -205,7 +212,7 @@ async function geminiChat(opts: {
 }): Promise<string> {
   const keys = geminiKeys();
   if (!keys.length) throw new Error("Missing GEMINI_API_KEY");
-  const models = ["gemini-2.5-flash"];
+  const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"];
   let lastError = "";
   for (const key of keys) {
     for (const model of models) {
@@ -325,7 +332,15 @@ async function groqChat(opts: {
 // are attempted, and the ones most likely to work come first.
 function buildProviderList(): Array<{ name: string; fn: (opts: ChatOpts) => Promise<string> }> {
   const providers: Array<{ name: string; fn: (opts: ChatOpts) => Promise<string> }> = [];
-  // Groq first — free tier, all new models confirmed working
+  // Lovable AI Gateway first — built-in, most likely to work
+  if (process.env.LOVABLE_API_KEY && process.env.LOVABLE_API_KEY.length > 10) {
+    providers.push({ name: "Lovable", fn: lovableChat });
+  }
+  // Anthropic second — if key is configured
+  if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.length > 10) {
+    providers.push({ name: "Anthropic", fn: anthropicChat });
+  }
+  // Groq — free tier
   if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 10) {
     providers.push({ name: "Groq", fn: groqChat });
   }
@@ -345,15 +360,9 @@ function buildProviderList(): Array<{ name: string; fn: (opts: ChatOpts) => Prom
   if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 10) {
     providers.push({ name: "Gemini", fn: geminiChat });
   }
-  if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.length > 10) {
-    providers.push({ name: "Anthropic", fn: anthropicChat });
-  }
   const hfKey = process.env.HUGGINGFACE_APIKEY || process.env.HUGGINGFACE_API_KEY || process.env.HF_API_KEY;
   if (hfKey && hfKey.length > 10) {
     providers.push({ name: "HuggingFace", fn: huggingFaceChat });
-  }
-  if (process.env.LOVABLE_API_KEY && process.env.LOVABLE_API_KEY.length > 10) {
-    providers.push({ name: "Lovable", fn: lovableChat });
   }
   return providers;
 }
@@ -406,15 +415,28 @@ export async function orChat(opts: ChatOpts): Promise<string> {
     throw new Error("No AI provider keys configured. Set OPENAI_API_KEY or GEMINI_API_KEY.");
   }
   const errors: string[] = [];
+  const providerLog: Array<{ provider: string; status: string; errorSnippet: string; responseLength: number; durationMs: number }> = [];
   for (const { name, fn } of providers) {
+    const startTime = Date.now();
     try {
       const result = await fn(opts);
-      if (result && result.trim().length > 0) return result;
-      errors.push(`${name}: empty response`);
+      const durationMs = Date.now() - startTime;
+      if (result && result.trim().length > 0) {
+        providerLog.push({ provider: name, status: "success", errorSnippet: "", responseLength: result.length, durationMs });
+        console.log("[ai-diag] orChat success:", JSON.stringify({ provider: name, responseLength: result.length, durationMs, jsonMode: !!opts.json, timestamp: new Date().toISOString() }));
+        return result;
+      }
+      const msg = "empty response";
+      errors.push(`${name}: ${msg}`);
+      providerLog.push({ provider: name, status: "empty", errorSnippet: msg, responseLength: 0, durationMs });
     } catch (err) {
-      errors.push(`${name}: ${(err as Error).message}`);
+      const durationMs = Date.now() - startTime;
+      const msg = (err as Error).message;
+      errors.push(`${name}: ${msg}`);
+      providerLog.push({ provider: name, status: "error", errorSnippet: msg.slice(0, 120), responseLength: 0, durationMs });
     }
   }
+  console.error("[ai-diag] orChat all providers failed:", JSON.stringify({ providersTried: providerLog, timestamp: new Date().toISOString() }));
   throw new Error(`All AI providers failed: ${errors.join(" | ")}`);
 }
 
