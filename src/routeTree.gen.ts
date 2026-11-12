@@ -28,6 +28,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TodayRouteImport } from './routes/today'
+import { Route as Top10RouteImport } from './routes/top10'
 import { Route as TreehedronRouteImport } from './routes/treehedron'
 import { Route as TrendingRouteImport } from './routes/trending'
 import { Route as VisionRouteImport } from './routes/vision'
@@ -145,6 +146,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const TodayRoute = TodayRouteImport.update({
   id: '/today',
   path: '/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Top10Route = Top10RouteImport.update({
+  id: '/top10',
+  path: '/top10',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TreehedronRoute = TreehedronRouteImport.update({
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/today': typeof TodayRoute
+  '/top10': typeof Top10Route
   '/treehedron': typeof TreehedronRouteWithChildren
   '/trending': typeof TrendingRoute
   '/vision': typeof VisionRoute
@@ -337,6 +344,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/today': typeof TodayRoute
+  '/top10': typeof Top10Route
   '/treehedron': typeof TreehedronRouteWithChildren
   '/trending': typeof TrendingRoute
   '/vision': typeof VisionRoute
@@ -383,6 +391,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/today': typeof TodayRoute
+  '/top10': typeof Top10Route
   '/treehedron': typeof TreehedronRouteWithChildren
   '/trending': typeof TrendingRoute
   '/vision': typeof VisionRoute
@@ -429,6 +438,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sitemap.xml'
     | '/today'
+    | '/top10'
     | '/treehedron'
     | '/trending'
     | '/vision'
@@ -473,6 +483,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sitemap.xml'
     | '/today'
+    | '/top10'
     | '/treehedron'
     | '/trending'
     | '/vision'
@@ -518,6 +529,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sitemap.xml'
     | '/today'
+    | '/top10'
     | '/treehedron'
     | '/trending'
     | '/vision'
@@ -564,6 +576,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TodayRoute: typeof TodayRoute
+  Top10Route: typeof Top10Route
   TreehedronRoute: typeof TreehedronRouteWithChildren
   TrendingRoute: typeof TrendingRoute
   VisionRoute: typeof VisionRoute
@@ -713,6 +726,13 @@ declare module '@tanstack/react-router' {
       path: '/today'
       fullPath: '/today'
       preLoaderRoute: typeof TodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/top10': {
+      id: '/top10'
+      path: '/top10'
+      fullPath: '/top10'
+      preLoaderRoute: typeof Top10RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/treehedron': {
@@ -955,6 +975,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TodayRoute: TodayRoute,
+  Top10Route: Top10Route,
   TreehedronRoute: TreehedronRouteWithChildren,
   TrendingRoute: TrendingRoute,
   VisionRoute: VisionRoute,
