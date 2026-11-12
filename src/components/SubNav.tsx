@@ -39,7 +39,6 @@ export function SubNav() {
     <div className="border-b rule bg-background/95">
       <div className="container-edit overflow-x-auto scrollbar-hide py-3">
         <div className="flex min-w-max items-center justify-between gap-2 sm:gap-3">
-        {/* Left: Menu dropdown */}
         <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
